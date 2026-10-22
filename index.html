@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ira Organics - Stock & Sales Core Manager</title>
+</head>
+<body>
+    <header>
+        <h1>Ira ORGANICS SUPER MARKET</h1>
+        <p>Live Core Database & Active Stock Valuation Ledger Tool</p>
+        <div style="margin-top:8px;font-size:0.85rem;"><span id="connStatus">● Connecting…</span></div>
+    </header>
+
+    <div class="container">
+        
+        <div class="mode-selector">
+            <button id="btnModeStock" class="mode-btn active" onclick="switchViewMode('STOCK')">📦 Stock Management</button>
+            <button id="btnModeSales" class="mode-btn" onclick="switchViewMode('SALES')">🛒 Sales Management</button>
+        </div>
+
+        <div class="date-filter-box">
+            <div>
+                <label id="datePickerLabel">Filter Calculations By Day:</label>
+                <input type="date" id="globalDateFilter" onchange="renderAll()">
+            </div>
+            <button id="btnClearFilterBtn" onclick="clearDateFilter()" style="background-color: #777; padding: 6px 12px; font-size: 0.85rem;">Show All-Time Metrics</button>
+            <span id="filterStatusBadge" style="font-size:0.85rem; color: var(--primary-green); font-weight: bold;"></span>
+        </div>
+
+        <div class="finance-cards">
+            <div class="card stock-val">
+                <h3>Total Inventory Cost</h3>
+                <div class="value" id="dispStockVal">₹0.00</div>
+            </div>
+            <div class="card net-profit">
+                <h3>Total Profit</h3>
+                <div class="value" id="dispNetProfit">₹0.00</div>
+            </div>
+            <div class="card items-sold">
+                <h3>Total Products Sold</h3>
+                <div class="value" id="dispTotalSold">0 items</div>
+            </div>
+        </div>
+
+        <div id="sectionStockManagement" class="workspace-grid">
+            
+            <div>
+                <div class="panel" id="productFormPanel">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                        <h2 id="formPanelTitle" style="margin:0; border:none; padding:0; color:var(--primary-green); font-size:1.2rem;">➕ Add New Stock Item</h2>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" id="btnSwitchAdd"  onclick="switchFormMode('ADD')"  style="padding:6px 14px; font-size:0.82rem; background:var(--primary-green);">➕ Add New</button>
+                            <button type="button" id="btnSwitchEdit" onclick="switchFormMode('EDIT')" style="padding:6px 14px; font-size:0.82rem; background:#0288d1;">✏️ Edit Existing</button>
+                        </div>
+                    </div>
+
+                    <div id="editPickerRow" style="display:none; margin-bottom:12px; background:var(--light-green); padding:10px; border-radius:6px;">
+                        <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:5px; color:var(--primary-green);">Select product to edit:</label>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <select id="editProductPicker" onchange="loadProductIntoForm()" style="flex:1; padding:7px 10px; border-radius:4px; border:1px solid #ccc; font-weight:600; min-width:180px;">
+                                <option value="">-- Choose a product --</option>
+                            </select>
+                            <button type="button" onclick="cancelEdit()" style="background:#777; padding:6px 12px; font-size:0.82rem;">✕ Cancel</button>
+                        </div>
+                    </div>
+
+                    <form id="productForm">
+                        <input type="hidden" id="editingProductId" value="">
+                        <div class="form-row-grid">
+                            <div class="form-group">
+                                <label>Item Name</label>
+                                <input type="text" id="prodName" placeholder="Product name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Stock Group / Category</label>
+                                <select id="prodCategory" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Unit Pack</label>
+                                <input type="text" id="prodUnit" placeholder="e.g. KG, 200 ML, Pack" required>
+                            </div>
+                        </div>
+                        <div class="form-row-grid" style="margin-top: 10px;">
+                            <div class="form-group">
+                                <label>Cost Price (₹ - PS/P)</label>
+                                <input type="number" id="prodCost" min="0" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Selling Price (₹ - S/P)</label>
+                                <input type="number" id="prodPrice" min="0" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label id="qtyLabel">Stock Qty</label>
+                                <input type="number" id="prodQty" min="0" required>
+                            </div>
+                            <div class="form-group" style="justify-content: flex-end;">
+                                <button type="submit" id="formSubmitBtn" style="width: 100%;">Add Item</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="panel">
+                    <div style="display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <h2 style="margin:0; border:none; padding:0;">Live Stock Directory</h2>
+                        <select id="filterCategory" onchange="renderAll()" style="padding: 6px 12px; border-radius:4px; font-weight:600;"></select>
+                    </div>
+                    
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item Details</th>
+                                    <th>Group</th>
+                                    <th>Unit</th>
+                                    <th>Cost / Sale Price</th>
+                                    <th>Available Stock</th>
+                                    <th>Stock Entry Date</th>
+                                    <th>Edit</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="panel" style="border: 1px solid var(--primary-green);">
+                    <h2 style="color: var(--primary-green);">⚙️ Manage Stock Groups</h2>
+                    <p style="font-size:0.85rem; margin-top:0; color:#666;">Add new custom categories (e.g., RICE, MILLET) or remove unused groups.</p>
+                    
+                    <div style="display: flex; gap: 6px; margin-bottom: 15px;">
+                        <input type="text" id="newCategoryInput" placeholder="e.g., MILLET" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase;">
+                        <button type="button" onclick="addNewCategory()">➕ Add Group</button>
+                    </div>
+
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; border-radius: 4px; background: #fafafa;">
+                        <div id="categoryManagementList"></div>
+                    </div>
+                </div>
+
+                <div class="panel" style="border: 1px dashed var(--excel-green);">
+                    <h2 style="color: var(--excel-green); border-bottom-color: #e8f5e9;">📦 Stock Export Controls</h2>
+                    <p style="font-size:0.85rem; margin-top:0; color:#666;">Export your full inventory list as Excel. Filter by category to export one group or all.</p>
+
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label style="font-size:0.85rem;">Filter by Category (optional)</label>
+                        <select id="stockExportCategoryFilter" onchange="updateStockExportPreview()" style="padding:7px 10px; border-radius:4px; font-weight:600; border:1px solid #ccc;"></select>
+                    </div>
+
+                    <div style="background:#f0f7f0; border:1px solid #c8e6c9; border-radius:6px; padding:10px; margin-bottom:12px; font-size:0.85rem; color:#2e7d32;">
+                        <strong>Preview:</strong> <span id="stockExportPreview">Loading...</span>
+                    </div>
+
+                    <button type="button" class="excel-btn" style="width:100%;" onclick="exportStockExcel()">📊 Export Stock as Excel</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="sectionSalesManagement" class="workspace-grid" style="display:none;">
+            <div>
+                <div class="panel">
+                    <h2>Multi-Item Sales Checkout Terminal</h2>
+                    <p style="font-size:0.85rem; margin-top:-5px; color:#666;">Build a dynamic customer cart layout below and dispatch bulk inventory transactions simultaneously.</p>
+                    
+                    <div style="margin-bottom: 15px; background: var(--light-green); padding: 15px; border-radius: 6px;">
+                        
+                        <label style="color: var(--primary-green); font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 5px;">Filter Product Options By Group:</label>
+                        <div id="terminalGroupButtons" class="group-search-container"></div>
+
+                        <div class="form-row-grid">
+                            <div class="form-group">
+                                <label style="color: var(--primary-green);">Choose Item</label>
+                                <select id="salesTerminalProductSelect" onchange="updateTerminalPriceDisplay()"></select>
+                            </div>
+                            <div class="form-group">
+                                <label style="color: var(--primary-green);">Quantity</label>
+                                <input type="number" id="salesTerminalQtyInput" value="1" min="1" oninput="updateTerminalPriceDisplay()">
+                            </div>
+                            <div class="form-group">
+                                <label style="color: var(--primary-green);">Sub-Total Price</label>
+                                <input type="text" id="salesTerminalPriceDisplay" value="₹0.00" readonly style="font-weight: bold; background: #fff; color: var(--primary-green); font-size: 1.1rem; text-align: center;">
+                            </div>
+                            <div class="form-group" style="justify-content: flex-end;">
+                                <button type="button" style="background-color: var(--primary-green); width:100%;" onclick="addItemToCart()">➕ Add To Cart</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="color:var(--primary-green); margin-bottom: 5px;">Active Deal Cart Items</h3>
+                    <div class="table-wrap" style="max-height: 200px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product Item Name</th>
+                                    <th>Unit</th>
+                                    <th>Unit Price</th>
+                                    <th>Qty Chosen</th>
+                                    <th>Total Cost</th>
+                                    <th>Remove</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cartTableBody">
+                                <tr><td colspan="6" style="text-align:center; color:#999;">Cart is empty. Add matching ledger products above.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="display:flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px; border-radius: 6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <div>
+                            <span style="font-size:1.1rem; font-weight:600;">Total Amount to Pay: </span>
+                            <span id="cartGrandTotalDisplay" style="font-size:1.4rem; font-weight:bold; color:var(--primary-green); margin-left: 10px;">₹0.00</span>
+                        </div>
+                        <button type="button" style="background-color: var(--accent-orange); padding: 12px 24px; font-size:1.05rem;" onclick="executeTerminalCheckout()">⚡ Complete Sale</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>Daily Sales History Logs</h2>
+                    <div class="table-wrap" style="max-height: 500px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Timestamp / Date</th>
+                                    <th>Product Name</th>
+                                    <th>Category</th>
+                                    <th>Amount Received</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesLedgerBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="panel" style="border: 1px dashed var(--excel-green);">
+                    <h2 style="color: var(--excel-green); border-bottom-color: #e8f5e9;">🛒 Sales Export Controls</h2>
+                    <p style="font-size:0.85rem; margin-top:0; color:#666;">Export sales records filtered by month. Each export shows date, product, category, qty and amount.</p>
+
+                    <div class="form-group">
+                        <label style="font-size:0.85rem;">Select Month to Export</label>
+                        <input type="month" id="monthlyFilterPicker" onchange="renderAll(); updateSalesExportPreview();" style="font-weight: 600; padding:7px 10px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+
+                    <div class="form-group" style="margin-top:8px;">
+                        <label style="font-size:0.85rem;">Filter by Category (optional)</label>
+                        <select id="salesExportCategoryFilter" onchange="updateSalesExportPreview()" style="padding:7px 10px; border-radius:4px; font-weight:600; border:1px solid #ccc;"></select>
+                    </div>
+
+                    <div style="background:#f0f7f0; border:1px solid #c8e6c9; border-radius:6px; padding:10px; margin-bottom:12px; font-size:0.85rem; color:#2e7d32;">
+                        <strong>Preview:</strong> <span id="salesExportPreview">Select a month above</span>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button type="button" class="excel-btn" onclick="exportMonthlySalesExcel()">📤 Export Month's Sales as Excel</button>
+                        <button type="button" class="excel-btn" style="background-color:#0288d1;" onclick="exportAllSalesExcel()">📋 Export All-Time Sales</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p><strong>Ira Organics System Manager Portal</strong></p>
+    </footer>
+    <script type="module" src="/src/main.js"></script>
+</body></html>
